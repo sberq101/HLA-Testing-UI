@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HLA Testing UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+      background: #001F3F;
+      color: #ffffff;
+    }
+    h1 {
+      text-align: center;
+      color: #00ADEF;
+    }
+    #prompt {
+      margin-bottom: 20px;
+      font-size: 18px;
+      text-align: center;
+    }
+    #buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .btn-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 10px;
+    }
+    .btn {
+      padding: 10px 20px;
+      margin-top: 8px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-pass { background-color: #4CAF50; color: #ffffff; }
+    .btn-fail { background-color: #F44336; color: #ffffff; }
+    .btn-default { background-color: #00ADEF; color: #ffffff; }
+    .btn-start   { background-color: #FFC107; color: #000000; }
+  </style>
+</head>
+<body>
+  <h1>HLA Testing UI</h1>
+  <div id="prompt"></div>
+  <div id="buttons"></div>
+  <script>
+    const steps = [
+      { prompt: 'Press "Start HLA Test" to begin.', buttons: ['Start HLA Test'] },
+      { passMsg: 'DUT remains off', failMsg: 'DUT wakes', buttons: ['Pass', 'Fail'], promptMsg: 'Press reset button briefly (<1 second).' },
+      { passMsg: 'DUT wakes properly & LED flashes blue', failMsg: 'LED fails or DUT doesn\'t wake', buttons: ['Pass', 'Fail'], promptMsg: 'Press and hold reset for 1.3 seconds.' },
+      { prompt: 'Press "Connect to DUT" and allow up to 5 seconds for BLE connection.', buttons: ['Connect to DUT'] },
+      { prompt: 'If connected → Continue. If failed → Fail Connection.', buttons: ['Continue', 'Fail'] },
+      { prompt: 'Press "Record Statistics" for System Health Check.', buttons: ['Record Statistics'] },
+      { passMsg: 'All values within range', failMsg: 'Any value outside range', buttons: ['Pass', 'Fail'], promptMsg: null },
+      { prompt: 'Press "Confirm DUT Inserted" after securing DUT in fixture.', buttons: ['Confirm DUT Inserted'] },
+      { prompt: 'Press "Enroll Credentials" to enroll RFID and NFC credentials.', buttons: ['Enroll Credentials'] },
+      { passMsg: 'Successful Credential Enrollment', failMsg: 'Failed Credential Enrollment', buttons: ['Pass', 'Fail'], promptMsg: null },
+      { prompt: 'Press "Start RFID Test" to initiate RFID credential test.', buttons: ['Start RFID Test'] },
+      { passMsg: 'LED flashes green & mechanism engages', failMsg: 'LED/mechanism did not engage', buttons: ['Pass', 'Fail'], promptMsg: null },
+      { prompt: 'Press "Start NFC Test" to initiate NFC credential test.', buttons: ['Start NFC Test'] },
+      { passMsg: 'LED flashes green & mechanism engages', failMsg: 'LED/mechanism did not engage', buttons: ['Pass', 'Fail'], promptMsg: null },
+      { prompt: 'Press "Confirm DUT Removed" after removing DUT from fixture.', buttons: ['Confirm DUT Removed'] },
+      { prompt: 'Press "Unenroll Credentials" to unenroll RFID and NFC.', buttons: ['Unenroll Credentials'] },
+      { passMsg: 'Successful Credential Unenrollment', failMsg: 'Failed Credential Unenrollment', buttons: ['Pass', 'Fail'], promptMsg: null },
+      { passMsg: 'LED flashes red & pins do not move', failMsg: 'LED/pins behavior incorrect', buttons: ['Pass', 'Fail'], promptMsg: 'Present RFID credential.' },
+      { passMsg: 'LED flashes red & pins do not move', failMsg: 'LED/pins behavior incorrect', buttons: ['Pass', 'Fail'], promptMsg: 'Present NFC credential.' },
+      { prompt: 'Press "End Invalid Credential Test" to proceed to power down.', buttons: ['End Invalid Credential Test'] },
+      { passMsg: 'DUT remains on', failMsg: 'DUT powers off', buttons: ['Pass', 'Fail'], promptMsg: 'Press reset briefly (<1 second).' },
+      { passMsg: 'DUT enters deep sleep', failMsg: 'LEDs still flash', buttons: ['Pass', 'Fail'], promptMsg: 'Press and hold reset for 7 seconds.' },
+      { prompt: 'Press "Power Down and Deep Sleep Check Complete" and store DUT for packaging.', buttons: ['Power Down and Deep Sleep Check Complete'] }
+    ];
+    let currentStep = 0;
+    function renderStep() {
+      const promptEl = document.getElementById('prompt');
+      const buttonsEl = document.getElementById('buttons');
+      if (currentStep === -1) {
+        promptEl.innerHTML = '<strong>Test Failed</strong><br/>Please set aside the DUT for engineering review.';
+        buttonsEl.innerHTML = '';
+        const restartBtn = document.createElement('button');
+        restartBtn.textContent = 'Restart'; restartBtn.className = 'btn btn-start';
+        restartBtn.onclick = () => { currentStep = 0; renderStep(); };
+        buttonsEl.appendChild(restartBtn);
+        return;
+      }
+      if (currentStep >= steps.length) {
+        promptEl.innerHTML = '<strong>Test Complete</strong><br/>Thank you for completing Test B.';
+        buttonsEl.innerHTML = '';
+        const restartBtn = document.createElement('button');
+        restartBtn.textContent = 'Restart'; restartBtn.className = 'btn btn-start';
+        restartBtn.onclick = () => { currentStep = 0; renderStep(); };
+        buttonsEl.appendChild(restartBtn);
+        return;
+      }
+      const step = steps[currentStep];
+      buttonsEl.innerHTML = '';
+      // Render prompt or pass/fail conditions
+      if (step.buttons.length === 2 && step.buttons.includes('Pass') && step.passMsg) {
+        promptEl.innerHTML = step.promptMsg || '';
+        // Create two columns
+        ['Pass', 'Fail'].forEach(label => {
+          const container = document.createElement('div');
+          container.className = 'btn-container';
+          const msg = document.createElement('div');
+          msg.textContent = label === 'Pass' ? step.passMsg : step.failMsg;
+          const btn = document.createElement('button');
+          btn.textContent = label;
+          btn.className = 'btn ' + (label === 'Pass' ? 'btn-pass' : 'btn-fail');
+          btn.onclick = () => { if (label === 'Fail') currentStep = -1; else currentStep++; renderStep(); };
+          container.appendChild(msg);
+          container.appendChild(btn);
+          buttonsEl.appendChild(container);
+        });
+      } else {
+        promptEl.textContent = step.prompt;
+        step.buttons.forEach(label => {
+          const btn = document.createElement('button');
+          btn.textContent = label;
+          btn.className = 'btn ' + (
+            label.toLowerCase().includes('pass') ? 'btn-pass' :
+            label.toLowerCase().includes('fail') ? 'btn-fail' :
+            label.toLowerCase().includes('start') || label.toLowerCase().includes('connect') ? 'btn-start' :
+            'btn-default'
+          );
+          btn.onclick = () => { if (label.toLowerCase() === 'fail') currentStep = -1; else currentStep++; renderStep(); };
+          buttonsEl.appendChild(btn);
+        });
+      }
+    }
+    renderStep();
+  </script>
+</body>
+</html>
